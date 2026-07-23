@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Handoff"
+  short_description: "Create, verify, and resume cross-host project handoffs"
+  default_prompt: "Use $handoff with `handoff 交班` or `handoff 接班` for this project."
+policy:
+  allow_implicit_invocation: true

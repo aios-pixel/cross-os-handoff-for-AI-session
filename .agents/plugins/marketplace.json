@@ -1,0 +1,20 @@
+{
+  "name": "cross-os-handoff-for-ai-session",
+  "interface": {
+    "displayName": "Cross-OS Handoff for AI Sessions"
+  },
+  "plugins": [
+    {
+      "name": "cn-handoff",
+      "source": {
+        "source": "local",
+        "path": "./plugins/cn-handoff"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

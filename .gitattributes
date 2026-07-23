@@ -1,0 +1,4 @@
+* text=auto
+
+# Keep the cross-platform plugin byte-identical on every host.
+plugins/cn-handoff/** text eol=lf

@@ -1,0 +1,24 @@
+{
+  "name": "cn-handoff",
+  "version": "2.0.0",
+  "description": "Create and resume verified project handoffs across Codex tasks and hosts.",
+  "author": {
+    "name": "tc",
+    "url": "https://github.com/aios-pixel"
+  },
+  "repository": "https://github.com/aios-pixel/cross-os-handoff-for-AI-session",
+  "keywords": ["handoff", "continuity", "cross-host", "project-state"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Cross-OS Handoff",
+    "shortDescription": "Verified project continuity across tasks and hosts.",
+    "longDescription": "Creates evidence-backed project state files and reconstructs context in a new Codex task without assuming hidden conversation continuity.",
+    "developerName": "tc",
+    "category": "Productivity",
+    "capabilities": ["Write"],
+    "defaultPrompt": [
+      "Use $handoff with `handoff 交班` for this project.",
+      "Use $handoff with `handoff 接班` and verify the live workspace."
+    ]
+  }
+}
