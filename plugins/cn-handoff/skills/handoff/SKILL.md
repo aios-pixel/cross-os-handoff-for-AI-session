@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Create, finalize, and resume verified project handoffs. Use whenever the user says `handoff 交班`, `handoff 任務後交班`, `handoff 接班`, `/handoff`, or `/handoff 接班`; asks to hand off or resume a project; requests context reconstruction; wants a new Codex task or host to continue prior work; or explicitly asks for handoff after another task finishes. Exact commands trigger their complete workflows without requiring the user to restate project details.
+description: Create, finalize, and resume verified project handoffs. Use whenever the user says `handoff prepare`, `handoff after-task`, `handoff resume`, `handoff 交班`, `handoff 任務後交班`, `handoff 接班`, `/handoff`, or `/handoff 接班`; asks to hand off or resume a project; requests context reconstruction; wants a new Codex task or host to continue prior work; or explicitly asks for handoff after another task finishes. Exact commands trigger their complete workflows without requiring the user to restate project details.
 ---
 
 # Handoff
@@ -9,16 +9,16 @@ Reconstruct project context from verified files and Git state. Never treat a new
 
 ## Contract version
 
-- Skill version: `2.1.7`
+- Skill version: `2.2.0`
 - Handoff schema: `3`
 - Durable state: project files and Git artifacts
 - Conversation transcripts and model memory: supplementary evidence only
 
 ## Invocation contract
 
-- `handoff 交班` or `/handoff`: run the full handoff workflow in the requested workspace. Authorize only project status and handoff-file writes.
-- `handoff 任務後交班`: finish the other explicitly authorized task and proportional QA first, then run the full handoff workflow against the resulting workspace.
-- `handoff 接班` or `/handoff 接班`: run the full resume workflow. Keep it read-only and stop after reporting the reconstructed state.
+- `handoff prepare`: run the full handoff workflow in the requested workspace. Authorize only project status and handoff-file writes. Backward-compatible aliases: `handoff 交班` and `/handoff`.
+- `handoff after-task`: finish the other explicitly authorized task and proportional QA first, then run the full handoff workflow against the resulting workspace. Backward-compatible alias: `handoff 任務後交班`.
+- `handoff resume`: run the full resume workflow. Keep it read-only and stop after reporting the reconstructed state. Backward-compatible aliases: `handoff 接班` and `/handoff 接班`.
 - When the user supplies a path, use it instead of the current working directory.
 - Finish handoff or resume verification before any separately authorized follow-up action.
 - Discover safely available facts from the live workspace; do not ask the user to repeat them.
@@ -57,16 +57,16 @@ Confirm:
 
 Trust verified filesystem evidence when an environment description disagrees.
 
-## Mode: `handoff 任務後交班`
+## Mode: `handoff after-task`
 
 1. Perform only the non-handoff work explicitly authorized in the same request.
 2. Complete relevant tests, renders, scans, readbacks, or other proportional QA.
-3. Run `handoff 交班` against the resulting workspace.
+3. Run `handoff prepare` against the resulting workspace.
 4. If work fails or remains incomplete, record the actual partial state and next recovery action without claiming completion.
 5. If no material project state changed and existing status files remain accurate, verify them without cosmetic timestamp churn.
 6. Report the task outcome first, then the handoff state, unresolved gaps, next exact deliverable, contradictions, and QA.
 
-## Mode: `handoff 交班`
+## Mode: `handoff prepare`
 
 ### Authorization boundary
 
@@ -132,7 +132,7 @@ Point to `SESSION.md` instead of duplicating detail.
 6. Confirm no secrets or PII were added and every unverified claim is labeled.
 7. Report files changed, current authority, unresolved gaps, next deliverable, contradictions, and validation. Then stop.
 
-## Mode: `handoff 接班`
+## Mode: `handoff resume`
 
 ### Read-only boundary
 

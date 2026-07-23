@@ -30,14 +30,22 @@ Open a fresh Codex task after installation so the skill catalog reloads.
 ## Commands
 
 ```text
-handoff 交班
-handoff 任務後交班
-handoff 接班
+handoff prepare
+handoff after-task
+handoff resume
 ```
 
-- `handoff 交班` verifies the current workspace and maintains the project handoff files.
-- `handoff 任務後交班` completes an explicitly authorized task, performs proportional QA, then records the resulting state.
-- `handoff 接班` performs read-only reconstruction in a new task and stops after reporting the verified state.
+- `handoff prepare` verifies the current workspace and maintains the project handoff files.
+- `handoff after-task` completes an explicitly authorized task, performs proportional QA, then records the resulting state.
+- `handoff resume` performs read-only reconstruction in a new task and stops after reporting the verified state.
+
+The Chinese commands remain available as backward-compatible aliases:
+
+|Primary command|Backward-compatible alias|
+|---|---|
+|`handoff prepare`|`handoff 交班`|
+|`handoff after-task`|`handoff 任務後交班`|
+|`handoff resume`|`handoff 接班`|
 
 If the project has no handoff convention, the plugin uses:
 
@@ -49,7 +57,7 @@ If the project has no handoff convention, the plugin uses:
 On the source computer:
 
 1. Open the real project workspace.
-2. Run `handoff 交班`.
+2. Run `handoff prepare`.
 3. Review the generated state files.
 4. Separately authorize and perform the required Git commit and push.
 
@@ -57,7 +65,7 @@ On the destination computer:
 
 1. Synchronize the same branch by an explicit fast-forward operation.
 2. Open a fresh Codex task in that workspace.
-3. Run `handoff 接班`.
+3. Run `handoff resume`.
 4. Confirm the reported branch, commit, dirty state, authority chain, and next deliverable.
 
 When the destination is behind its upstream, resume reports synchronization drift and stops. It does not pull, merge, reset, rebase, or continue implementation automatically.
@@ -84,7 +92,7 @@ python3 -m unittest discover -s tests -v
 
 ## Version history
 
-The public history contains verified source snapshots from `v2.0.0` through `v2.1.7`. See [CHANGELOG.md](CHANGELOG.md) and [PUBLICATION.md](PUBLICATION.md).
+The public history contains verified source snapshots from `v2.0.0` through `v2.2.0`. See [CHANGELOG.md](CHANGELOG.md) and [PUBLICATION.md](PUBLICATION.md).
 
 ## License
 
@@ -110,6 +118,8 @@ Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 - 清楚區分已驗證事實、未知項目、阻礙及授權邊界；
 - 接班預設唯讀，除非使用者另行授權實作。
 
-安裝後請開啟新的CodexTask，使SkillCatalog重新載入。交班端執行`handoff 交班`，接班端完成明確的GitFast-forward後，在新Task執行`handoff 接班`。
+主要指令為`handoff prepare`、`handoff after-task`及`handoff resume`。既有中文指令`handoff 交班`、`handoff 任務後交班`及`handoff 接班`保留為向後相容Alias。
+
+安裝後請開啟新的CodexTask，使SkillCatalog重新載入。交班端執行`handoff prepare`，接班端完成明確的GitFast-forward後，在新Task執行`handoff resume`。
 
 本工具不會自動執行Pull、Merge、Reset、Rebase、Commit、Push、部署或發布。

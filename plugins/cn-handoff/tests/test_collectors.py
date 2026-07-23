@@ -461,11 +461,41 @@ class CollectorContractTests(unittest.TestCase):
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.7")
+        self.assertEqual(manifest["version"], "2.2.0")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)
         self.assertIsNone(re.search(r"(?i)(api[_-]?key|access[_-]?token)\s*[:=]\s*[A-Za-z0-9_-]{12,}", skill))
+
+    def test_skill_declares_english_primary_commands_and_chinese_aliases(self) -> None:
+        manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        agent = (SKILL_ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
+        frontmatter = skill.split("---", 2)[1]
+        primary_commands = ("handoff prepare", "handoff after-task", "handoff resume")
+        chinese_aliases = ("handoff 交班", "handoff 任務後交班", "handoff 接班")
+        alias_contracts = (
+            "`handoff prepare`" + ": run the full handoff workflow",
+            "Backward-compatible aliases: `handoff 交班` and `/handoff`",
+            "`handoff after-task`" + ": finish the other explicitly authorized task",
+            "Backward-compatible alias: `handoff 任務後交班`",
+            "`handoff resume`" + ": run the full resume workflow",
+            "Backward-compatible aliases: `handoff 接班` and `/handoff 接班`",
+        )
+
+        for command in primary_commands:
+            self.assertIn(command, frontmatter)
+            self.assertIn(command, agent)
+            self.assertIn(f"## Mode: `{command}`", skill)
+        for alias in chinese_aliases:
+            self.assertIn(alias, frontmatter)
+            self.assertNotIn(f"## Mode: `{alias}`", skill)
+            self.assertNotIn(alias, agent)
+            self.assertTrue(all(alias not in prompt for prompt in manifest["interface"]["defaultPrompt"]))
+        for contract in alias_contracts:
+            self.assertIn(contract, skill)
+        self.assertIn("handoff prepare", manifest["interface"]["defaultPrompt"][0])
+        self.assertIn("handoff resume", manifest["interface"]["defaultPrompt"][1])
 
     def test_skill_declares_deterministic_resume_boundaries(self) -> None:
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")

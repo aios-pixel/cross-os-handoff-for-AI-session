@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 The public Git history was reconstructed from verified release snapshots. Private repository history, private project documents, and host-specific paths were intentionally excluded.
 
+## [2.2.0] - 2026-07-23
+
+### Changed
+
+- Made `handoff prepare`, `handoff after-task`, and `handoff resume` the primary command interface.
+- Preserved `handoff 交班`, `handoff 任務後交班`, and `handoff 接班` as backward-compatible aliases.
+- Expanded cross-platform contract coverage to 19 tests.
+
 ## [2.1.7] - 2026-07-23
 
 ### Fixed

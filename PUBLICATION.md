@@ -5,7 +5,7 @@ This repository is a clean public publication of `cn-handoff`.
 ## What was preserved
 
 - The six canonical source files from each verified snapshot.
-- The actual version sequence from `v2.0.0` through `v2.1.7`.
+- The actual version sequence from `v2.0.0` through `v2.2.0`.
 - The functional changes represented by each version.
 - Apache-2.0 licensing for the public project.
 

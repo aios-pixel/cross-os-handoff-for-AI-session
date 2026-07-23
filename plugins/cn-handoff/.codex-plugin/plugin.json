@@ -1,6 +1,6 @@
 {
   "name": "cn-handoff",
-  "version": "2.1.7",
+  "version": "2.2.0",
   "description": "Create and resume verified project handoffs across Codex tasks and hosts.",
   "author": {
     "name": "tc",
@@ -17,8 +17,8 @@
     "category": "Productivity",
     "capabilities": ["Write"],
     "defaultPrompt": [
-      "Use $handoff with `handoff 交班` for this project.",
-      "Use $handoff with `handoff 接班` and verify the live workspace."
+      "Use $handoff with `handoff prepare` for this project.",
+      "Use $handoff with `handoff resume` and verify the live workspace."
     ]
   }
 }
