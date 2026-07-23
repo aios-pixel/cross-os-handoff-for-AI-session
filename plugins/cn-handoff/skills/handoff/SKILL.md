@@ -9,8 +9,8 @@ Reconstruct project context from verified files and Git state. Never treat a new
 
 ## Contract version
 
-- Skill version: `2.0.0`
-- Handoff schema: `2`
+- Skill version: `2.1.0`
+- Handoff schema: `3`
 - Durable state: project files and Git artifacts
 - Conversation transcripts and model memory: supplementary evidence only
 
@@ -45,12 +45,12 @@ Run the bundled collector before interpreting status:
 - Windows PowerShell: `scripts/collect-workspace-state.ps1 -Path <workspace>`
 - macOS／Linux: `scripts/collect-workspace-state.sh <workspace>`
 
-Both collectors are read-only, emit schema `2`, redact absolute paths, and return the same core fields. Inspect additional details only when necessary.
+Both collectors are read-only, emit schema `3`, redact absolute paths, fail closed when critical Git evidence cannot be collected, and return the same core fields. Inspect additional details only when necessary.
 
 Confirm:
 
 - requested workspace and actual Git root;
-- branch, HEAD, upstream, dirty-state counts, worktree count, and nested-repository count;
+- branch, HEAD, upstream ref and commit, ahead／behind counts, verified dirty-state counts, worktree count, and recursive nested-repository count;
 - applicable `AGENTS.md` and status-file presence;
 - whether the supplied folder is only a shell and the actual work is adjacent or referenced;
 - whether source and destination hosts resolve the same repository identity and expected commit.
@@ -145,11 +145,13 @@ Do not edit, create, export, stage, commit, fetch, pull, push, deploy, browse, o
 3. Read `HANDOFF_交班.md`, `SESSION.md`, root README, and the current authority index in that order unless project instructions are stricter.
 4. Follow only direct authority pointers needed for the next deliverable.
 5. Compare branch, HEAD, upstream, dirty state, paths, hashes, versions, counts, artifact status, and external-state claims with live evidence.
-6. If local HEAD differs from the recorded handoff commit, report drift and stop. Do not pull or merge.
-7. Inspect representative formulas, ranges, sections, tests, or rendered outputs for material claims.
-8. Resolve contradictions with the project authority order; otherwise prefer the newest verified artifact and state uncertainty.
-9. Confirm the next deliverable is still unfinished. Do not repeat completed work.
-10. State that this is a new task reconstructing context, not the source execution session.
+6. If the collector fails, or a Git repository reports `GitStatus.Available` other than `true`, report that Git state is unverifiable and stop.
+7. Derive each state-file anchor with `git log -1 --format=%H -- SESSION.md` and `git log -1 --format=%H -- HANDOFF_交班.md`. Require both commands to return the same commit and require that commit to equal local `HEAD`; otherwise report state drift and stop.
+8. When an upstream exists, require `Ahead = 0`, `Behind = 0`, and `Head = UpstreamHead`. Any ahead, behind, or diverged state is sync drift: report the exact counts and commits, mark local authority potentially stale, and stop without reading it as current authority. Do not fetch, pull, or merge.
+9. Inspect representative formulas, ranges, sections, tests, or rendered outputs for material claims.
+10. Resolve contradictions with the project authority order; otherwise prefer the newest verified artifact and state uncertainty.
+11. Confirm the next deliverable is still unfinished. Do not repeat completed work.
+12. State that this is a new task reconstructing context, not the source execution session.
 
 ### Resume confirmation
 
