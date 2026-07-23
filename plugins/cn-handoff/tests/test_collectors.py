@@ -134,6 +134,23 @@ class CollectorContractTests(unittest.TestCase):
             self.assertIsNone(data["Ahead"])
             self.assertIsNone(data["Behind"])
 
+    def test_native_collector_reports_clean_counts_as_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = Path(temporary_directory)
+            self.run_git(repository, "init", "-q")
+            self.run_git(repository, "config", "user.name", "Collector Test")
+            self.run_git(repository, "config", "user.email", "collector.invalid")
+            (repository / "tracked.txt").write_text("base\n", encoding="utf-8")
+            self.run_git(repository, "add", "tracked.txt")
+            self.run_git(repository, "commit", "-q", "-m", "base")
+
+            result = self.run_native_collector(repository)
+            data = json.loads(result.stdout)
+            self.assert_contract(result.stdout)
+            self.assertFalse(data["GitStatus"]["IsDirty"])
+            for field in ("Staged", "Unstaged", "Untracked", "Conflicts"):
+                self.assertEqual(data["GitStatus"][field], 0)
+
     def test_native_collector_reports_dirty_counts(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             repository = Path(temporary_directory)
@@ -290,7 +307,7 @@ class CollectorContractTests(unittest.TestCase):
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.2")
+        self.assertEqual(manifest["version"], "2.1.3")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)

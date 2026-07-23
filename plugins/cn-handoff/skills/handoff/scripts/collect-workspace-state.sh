@@ -69,14 +69,14 @@ if command -v git >/dev/null 2>&1; then
 
     status_output=$(git -C "$workspace_root" status --porcelain=v1 2>/dev/null) || stop_collector "git_status_unavailable"
     git_status_available=true
-    untracked_count=$(printf '%s\n' "$status_output" | awk 'substr($0, 1, 2) == "??" { n++ } END { print n + 0 }')
+    untracked_count=$(printf '%s\n' "$status_output" | awk 'length($0) >= 2 && substr($0, 1, 2) == "??" { n++ } END { print n + 0 }')
     conflict_count=$(printf '%s\n' "$status_output" | awk '
       BEGIN { conflict["DD"]; conflict["AU"]; conflict["UD"]; conflict["UA"]; conflict["DU"]; conflict["AA"]; conflict["UU"] }
-      substr($0, 1, 2) in conflict { n++ }
+      length($0) >= 2 && substr($0, 1, 2) in conflict { n++ }
       END { print n + 0 }
     ')
-    staged_count=$(printf '%s\n' "$status_output" | awk 'substr($0, 1, 2) != "??" && substr($0, 1, 1) != " " { n++ } END { print n + 0 }')
-    unstaged_count=$(printf '%s\n' "$status_output" | awk 'substr($0, 1, 2) != "??" && substr($0, 2, 1) != " " { n++ } END { print n + 0 }')
+    staged_count=$(printf '%s\n' "$status_output" | awk 'length($0) >= 2 && substr($0, 1, 2) != "??" && substr($0, 1, 1) != " " { n++ } END { print n + 0 }')
+    unstaged_count=$(printf '%s\n' "$status_output" | awk 'length($0) >= 2 && substr($0, 1, 2) != "??" && substr($0, 2, 1) != " " { n++ } END { print n + 0 }')
 
     nested_repository_count=$(find "$workspace_root" -mindepth 1 \
       -path "$workspace_root/.git" -prune -o \

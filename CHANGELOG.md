@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 The public Git history was reconstructed from verified release snapshots. Private repository history, private project documents, and host-specific paths were intentionally excluded.
 
+## [2.1.3] - 2026-07-22
+
+### Fixed
+
+- Reported clean-workspace status counts as zero instead of null.
+
 ## [2.1.2] - 2026-07-22
 
 ### Changed
