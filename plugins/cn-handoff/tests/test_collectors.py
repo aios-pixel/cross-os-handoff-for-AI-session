@@ -396,17 +396,26 @@ class CollectorContractTests(unittest.TestCase):
             self.assertEqual(result.stdout, "")
             self.assertIn("collector_error=git_root_unavailable", result.stderr)
 
-    def test_windows_collector_when_powershell_exists(self) -> None:
+    def test_windows_collector_restores_process_state(self) -> None:
         shell = shutil.which("pwsh") or shutil.which("powershell")
         if not shell:
             self.skipTest("PowerShell is unavailable on this host")
         with tempfile.TemporaryDirectory() as temporary_directory:
             harness = Path(temporary_directory) / "invoke-collector.ps1"
             harness.write_text(
-                '$env:GIT_OPTIONAL_LOCKS = "caller-value"\n'
-                '$collectorOutput = @(& $args[0] -Path $args[1])\n'
-                'if ($env:GIT_OPTIONAL_LOCKS -ne "caller-value") { exit 44 }\n'
-                '$collectorOutput\n',
+                '$originalConsoleOutputEncoding = [Console]::OutputEncoding\n'
+                '$callerConsoleOutputEncoding = [System.Text.Encoding]::ASCII\n'
+                '[Console]::OutputEncoding = $callerConsoleOutputEncoding\n'
+                'try {\n'
+                '    $env:GIT_OPTIONAL_LOCKS = "caller-value"\n'
+                '    $collectorOutput = @(& $args[0] -Path $args[1])\n'
+                '    if ($env:GIT_OPTIONAL_LOCKS -ne "caller-value") { exit 44 }\n'
+                '    if ([Console]::OutputEncoding.CodePage -ne $callerConsoleOutputEncoding.CodePage) { exit 45 }\n'
+                '    $collectorOutput\n'
+                '}\n'
+                'finally {\n'
+                '    [Console]::OutputEncoding = $originalConsoleOutputEncoding\n'
+                '}\n',
                 encoding="utf-8",
             )
             result = subprocess.run(
@@ -440,6 +449,8 @@ class CollectorContractTests(unittest.TestCase):
         self.assertIn('$previousOptionalLocks = $env:GIT_OPTIONAL_LOCKS', script)
         self.assertIn('$env:GIT_OPTIONAL_LOCKS = $previousOptionalLocks', script)
         self.assertIn('Remove-Item Env:GIT_OPTIONAL_LOCKS', script)
+        self.assertIn('$previousConsoleOutputEncoding = [Console]::OutputEncoding', script)
+        self.assertIn('[Console]::OutputEncoding = $previousConsoleOutputEncoding', script)
         self.assertIn("Test-GitMarkerInAncestry", script)
         self.assertIn('$_.Substring(0, 2) -eq "??"', script)
         self.assertNotIn('-like "??*"', script)
@@ -450,7 +461,7 @@ class CollectorContractTests(unittest.TestCase):
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.6")
+        self.assertEqual(manifest["version"], "2.1.7")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)

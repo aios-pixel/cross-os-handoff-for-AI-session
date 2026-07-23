@@ -5,7 +5,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$previousConsoleOutputEncoding = [Console]::OutputEncoding
+try {
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 
 function Stop-Collector {
     param(
@@ -259,3 +261,7 @@ $result = [ordered]@{
 }
 
 $result | ConvertTo-Json -Depth 8
+}
+finally {
+    [Console]::OutputEncoding = $previousConsoleOutputEncoding
+}

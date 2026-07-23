@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 The public Git history was reconstructed from verified release snapshots. Private repository history, private project documents, and host-specific paths were intentionally excluded.
 
+## [2.1.7] - 2026-07-23
+
+### Fixed
+
+- Restored the caller's PowerShell output encoding after collector execution.
+- Added same-process regression coverage for PowerShell output encoding and `GIT_OPTIONAL_LOCKS`.
+
 ## [2.1.6] - 2026-07-23
 
 ### Changed
