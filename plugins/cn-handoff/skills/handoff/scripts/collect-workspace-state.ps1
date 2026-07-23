@@ -39,6 +39,22 @@ function Invoke-GitReadOnly {
     }
 }
 
+function Test-GitMarkerInAncestry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$StartPath
+    )
+
+    $currentItem = Get-Item -LiteralPath $StartPath
+    while ($null -ne $currentItem) {
+        if (Test-Path -LiteralPath (Join-Path $currentItem.FullName ".git")) {
+            return $true
+        }
+        $currentItem = $currentItem.Parent
+    }
+    return $false
+}
+
 $resolvedItem = Get-Item -LiteralPath (Resolve-Path -LiteralPath $Path).Path
 $resolvedPath = if ($resolvedItem.PSIsContainer) { $resolvedItem.FullName } else { $resolvedItem.DirectoryName }
 $gitCommand = Get-Command git -ErrorAction SilentlyContinue
@@ -122,6 +138,9 @@ if ($null -ne $gitCommand) {
         $remoteResult = Invoke-GitReadOnly -WorkingPath $workspaceRoot -Arguments @("remote")
         if ($remoteResult.ExitCode -ne 0) { Stop-Collector -Code "git_remote_unavailable" }
         $remoteCount = $remoteResult.Output.Count
+    }
+    elseif (Test-GitMarkerInAncestry -StartPath $resolvedPath) {
+        Stop-Collector -Code "git_root_unavailable"
     }
 }
 

@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 The public Git history was reconstructed from verified release snapshots. Private repository history, private project documents, and host-specific paths were intentionally excluded.
 
+## [2.1.5] - 2026-07-23
+
+### Changed
+
+- Failed closed when Git root discovery fails instead of accepting ambiguous workspace state.
+- Added regression coverage for Git root discovery failure.
+
 ## [2.1.4] - 2026-07-23
 
 ### Fixed

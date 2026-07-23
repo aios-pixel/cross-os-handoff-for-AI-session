@@ -274,6 +274,38 @@ class CollectorContractTests(unittest.TestCase):
             self.assertEqual(result.stdout, "")
             self.assertIn("collector_error=git_status_unavailable", result.stderr)
 
+    def test_native_collector_fails_closed_when_git_root_discovery_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repository = root / "repository"
+            repository.mkdir()
+            self.run_git(repository, "init", "-q")
+            fake_bin = root / "fake-bin"
+            fake_bin.mkdir()
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+
+            if platform.system() == "Windows":
+                wrapper = fake_bin / "git.cmd"
+                wrapper.write_text(
+                    f'@echo off\r\nif /I "%~3"=="rev-parse" if /I "%~4"=="--show-toplevel" exit /b 42\r\n"{real_git}" %*\r\n',
+                    encoding="utf-8",
+                )
+            else:
+                wrapper = fake_bin / "git"
+                wrapper.write_text(
+                    f'#!/bin/sh\nif [ "$3" = "rev-parse" ] && [ "$4" = "--show-toplevel" ]; then exit 42; fi\nexec "{real_git}" "$@"\n',
+                    encoding="utf-8",
+                )
+                wrapper.chmod(0o755)
+
+            environment = os.environ.copy()
+            environment["PATH"] = str(fake_bin) + os.pathsep + environment.get("PATH", "")
+            result = self.run_native_collector(repository, check=False, env=environment)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertIn("collector_error=git_root_unavailable", result.stderr)
+
     def test_windows_collector_when_powershell_exists(self) -> None:
         shell = shutil.which("pwsh") or shutil.which("powershell")
         if not shell:
@@ -301,6 +333,8 @@ class CollectorContractTests(unittest.TestCase):
         self.assertIn("Behind = $behind", script)
         self.assertIn("Available = $gitStatusAvailable", script)
         self.assertIn('Stop-Collector -Code "git_status_unavailable"', script)
+        self.assertIn('Stop-Collector -Code "git_root_unavailable"', script)
+        self.assertIn("Test-GitMarkerInAncestry", script)
         self.assertIn('$_.Substring(0, 2) -eq "??"', script)
         self.assertNotIn('-like "??*"', script)
         self.assertNotIn('-notlike "??*"', script)
@@ -310,7 +344,7 @@ class CollectorContractTests(unittest.TestCase):
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.4")
+        self.assertEqual(manifest["version"], "2.1.5")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)

@@ -1,6 +1,6 @@
 {
   "name": "cn-handoff",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Create and resume verified project handoffs across Codex tasks and hosts.",
   "author": {
     "name": "tc",

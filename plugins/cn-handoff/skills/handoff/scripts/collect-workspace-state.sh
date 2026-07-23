@@ -31,6 +31,17 @@ stop_collector() {
   exit 2
 }
 
+has_git_marker_in_ancestry() {
+  local current=$1
+  local parent
+  while :; do
+    [[ -e "$current/.git" ]] && return 0
+    parent=$(dirname "$current")
+    [[ "$parent" == "$current" ]] && return 1
+    current=$parent
+  done
+}
+
 if command -v git >/dev/null 2>&1; then
   git_available=true
   if root_candidate=$(git -C "$resolved_path" rev-parse --show-toplevel 2>/dev/null); then
@@ -81,6 +92,8 @@ if command -v git >/dev/null 2>&1; then
     nested_repository_count=$(find "$workspace_root" -mindepth 1 \
       -path "$workspace_root/.git" -prune -o \
       -name .git -print -prune 2>/dev/null | awk 'END { print NR + 0 }') || stop_collector "nested_repository_scan_failed"
+  elif has_git_marker_in_ancestry "$resolved_path"; then
+    stop_collector "git_root_unavailable"
   fi
 fi
 
