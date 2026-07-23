@@ -13,6 +13,7 @@ from pathlib import Path
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[3]
+WORKSPACE_ROOT = REPO_ROOT if (REPO_ROOT / ".git").exists() else PLUGIN_ROOT
 SKILL_ROOT = PLUGIN_ROOT / "skills" / "handoff"
 SCRIPTS = SKILL_ROOT / "scripts"
 
@@ -114,7 +115,7 @@ class CollectorContractTests(unittest.TestCase):
         if platform.system() == "Windows":
             self.skipTest("POSIX collector is not the native Windows path")
         result = subprocess.run(
-            [str(SCRIPTS / "collect-workspace-state.sh"), str(REPO_ROOT)],
+            [str(SCRIPTS / "collect-workspace-state.sh"), str(WORKSPACE_ROOT)],
             check=True,
             capture_output=True,
             text=True,
@@ -261,7 +262,7 @@ class CollectorContractTests(unittest.TestCase):
         if not shell:
             self.skipTest("PowerShell is unavailable on this host")
         result = subprocess.run(
-            [shell, "-NoProfile", "-File", str(SCRIPTS / "collect-workspace-state.ps1"), "-Path", str(REPO_ROOT)],
+            [shell, "-NoProfile", "-File", str(SCRIPTS / "collect-workspace-state.ps1"), "-Path", str(WORKSPACE_ROOT)],
             check=True,
             capture_output=True,
             text=True,
@@ -289,7 +290,7 @@ class CollectorContractTests(unittest.TestCase):
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.0")
+        self.assertEqual(manifest["version"], "2.1.1")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)
@@ -303,8 +304,10 @@ class CollectorContractTests(unittest.TestCase):
         self.assertIn("GitStatus.Available", skill)
 
     def test_plugin_text_files_use_canonical_lf(self) -> None:
-        attributes = (REPO_ROOT / ".gitattributes").read_text(encoding="utf-8")
-        self.assertIn("plugins/cn-handoff/** text eol=lf", attributes)
+        attributes_path = REPO_ROOT / ".gitattributes"
+        if attributes_path.is_file():
+            attributes = attributes_path.read_text(encoding="utf-8")
+            self.assertIn("plugins/cn-handoff/** text eol=lf", attributes)
         for path in CANONICAL_TEXT_FILES:
             with self.subTest(path=path.relative_to(REPO_ROOT)):
                 self.assertNotIn(b"\r\n", path.read_bytes())

@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 The public Git history was reconstructed from verified release snapshots. Private repository history, private project documents, and host-specific paths were intentionally excluded.
 
+## [2.1.1] - 2026-07-22
+
+### Changed
+
+- Made contract tests resolve correctly from an installed Plugin cache.
+
 ## [2.1.0] - 2026-07-22
 
 ### Changed
