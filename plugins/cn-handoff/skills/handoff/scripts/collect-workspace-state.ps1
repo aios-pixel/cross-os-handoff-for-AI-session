@@ -125,14 +125,16 @@ if ($null -ne $gitCommand) {
     }
 }
 
-$untrackedCount = @($statusLines | Where-Object { $_ -like "??*" }).Count
+$untrackedCount = @($statusLines | Where-Object {
+    $_.Length -ge 2 -and $_.Substring(0, 2) -eq "??"
+}).Count
 $conflictCodes = @("DD", "AU", "UD", "UA", "DU", "AA", "UU")
 $conflictCount = @($statusLines | Where-Object { $_.Length -ge 2 -and $conflictCodes -contains $_.Substring(0, 2) }).Count
 $stagedCount = @($statusLines | Where-Object {
-    $_.Length -ge 2 -and $_ -notlike "??*" -and $_.Substring(0, 1) -ne " "
+    $_.Length -ge 2 -and $_.Substring(0, 2) -ne "??" -and $_.Substring(0, 1) -ne " "
 }).Count
 $unstagedCount = @($statusLines | Where-Object {
-    $_.Length -ge 2 -and $_ -notlike "??*" -and $_.Substring(1, 1) -ne " "
+    $_.Length -ge 2 -and $_.Substring(0, 2) -ne "??" -and $_.Substring(1, 1) -ne " "
 }).Count
 
 if ($isGitRepository) {

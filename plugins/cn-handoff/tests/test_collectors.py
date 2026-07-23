@@ -301,13 +301,16 @@ class CollectorContractTests(unittest.TestCase):
         self.assertIn("Behind = $behind", script)
         self.assertIn("Available = $gitStatusAvailable", script)
         self.assertIn('Stop-Collector -Code "git_status_unavailable"', script)
+        self.assertIn('$_.Substring(0, 2) -eq "??"', script)
+        self.assertNotIn('-like "??*"', script)
+        self.assertNotIn('-notlike "??*"', script)
         self.assertNotIn("Hostname =", script)
         self.assertNotIn("DeviceName =", script)
 
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.3")
+        self.assertEqual(manifest["version"], "2.1.4")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)

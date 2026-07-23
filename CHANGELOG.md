@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 The public Git history was reconstructed from verified release snapshots. Private repository history, private project documents, and host-specific paths were intentionally excluded.
 
+## [2.1.4] - 2026-07-23
+
+### Fixed
+
+- Correctly classified staged, unstaged, and untracked files in the Windows collector.
+- Added regression coverage for Windows dirty-state counts.
+
 ## [2.1.3] - 2026-07-22
 
 ### Fixed
