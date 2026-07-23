@@ -290,7 +290,7 @@ class CollectorContractTests(unittest.TestCase):
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.1")
+        self.assertEqual(manifest["version"], "2.1.2")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)
@@ -302,6 +302,10 @@ class CollectorContractTests(unittest.TestCase):
         self.assertIn("git log -1 --format=%H -- HANDOFF_交班.md", skill)
         self.assertIn("`Ahead = 0`, `Behind = 0`, and `Head = UpstreamHead`", skill)
         self.assertIn("GitStatus.Available", skill)
+
+    def test_posix_collector_avoids_tempfile_backed_here_strings(self) -> None:
+        script = (SCRIPTS / "collect-workspace-state.sh").read_text(encoding="utf-8")
+        self.assertNotIn("<<<", script)
 
     def test_plugin_text_files_use_canonical_lf(self) -> None:
         attributes_path = REPO_ROOT / ".gitattributes"

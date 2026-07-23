@@ -43,7 +43,8 @@ if command -v git >/dev/null 2>&1; then
     if upstream=$(git -C "$workspace_root" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null); then
       upstream_head=$(git -C "$workspace_root" rev-parse '@{u}' 2>/dev/null) || stop_collector "git_upstream_head_unavailable"
       ahead_behind=$(git -C "$workspace_root" rev-list --left-right --count 'HEAD...@{u}' 2>/dev/null) || stop_collector "git_drift_unavailable"
-      read -r ahead behind <<< "$ahead_behind"
+      ahead=$(printf '%s\n' "$ahead_behind" | awk 'NR == 1 { print $1 }')
+      behind=$(printf '%s\n' "$ahead_behind" | awk 'NR == 1 { print $2 }')
       [[ "$ahead" =~ ^[0-9]+$ && "$behind" =~ ^[0-9]+$ ]] || stop_collector "git_drift_invalid"
     else
       upstream=""
@@ -68,20 +69,14 @@ if command -v git >/dev/null 2>&1; then
 
     status_output=$(git -C "$workspace_root" status --porcelain=v1 2>/dev/null) || stop_collector "git_status_unavailable"
     git_status_available=true
-
-    while IFS= read -r status_line; do
-      [[ -n "$status_line" ]] || continue
-      code=${status_line:0:2}
-      if [[ "$code" == "??" ]]; then
-        untracked_count=$((untracked_count + 1))
-        continue
-      fi
-      case "$code" in
-        DD|AU|UD|UA|DU|AA|UU) conflict_count=$((conflict_count + 1)) ;;
-      esac
-      [[ "${code:0:1}" == " " ]] || staged_count=$((staged_count + 1))
-      [[ "${code:1:1}" == " " ]] || unstaged_count=$((unstaged_count + 1))
-    done <<< "$status_output"
+    untracked_count=$(printf '%s\n' "$status_output" | awk 'substr($0, 1, 2) == "??" { n++ } END { print n + 0 }')
+    conflict_count=$(printf '%s\n' "$status_output" | awk '
+      BEGIN { conflict["DD"]; conflict["AU"]; conflict["UD"]; conflict["UA"]; conflict["DU"]; conflict["AA"]; conflict["UU"] }
+      substr($0, 1, 2) in conflict { n++ }
+      END { print n + 0 }
+    ')
+    staged_count=$(printf '%s\n' "$status_output" | awk 'substr($0, 1, 2) != "??" && substr($0, 1, 1) != " " { n++ } END { print n + 0 }')
+    unstaged_count=$(printf '%s\n' "$status_output" | awk 'substr($0, 1, 2) != "??" && substr($0, 2, 1) != " " { n++ } END { print n + 0 }')
 
     nested_repository_count=$(find "$workspace_root" -mindepth 1 \
       -path "$workspace_root/.git" -prune -o \
