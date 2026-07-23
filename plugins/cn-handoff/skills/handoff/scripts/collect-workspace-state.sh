@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+stop_collector() {
+  printf 'collector_error=%s\n' "$1" >&2
+  exit 2
+}
+
 requested_path=${1:-.}
+[[ -e "$requested_path" ]] || stop_collector "workspace_unavailable"
 if [[ -d "$requested_path" ]]; then
   resolved_path=$(cd "$requested_path" && pwd -P)
 else
   resolved_path=$(cd "$(dirname "$requested_path")" && pwd -P)
 fi
+
+export GIT_OPTIONAL_LOCKS=0
 
 git_available=false
 is_git_repository=false
@@ -25,11 +33,6 @@ conflict_count=0
 git_status_available=false
 worktree_count=0
 nested_repository_count=0
-
-stop_collector() {
-  printf 'collector_error=%s\n' "$1" >&2
-  exit 2
-}
 
 has_git_marker_in_ancestry() {
   local current=$1
@@ -78,7 +81,7 @@ if command -v git >/dev/null 2>&1; then
     worktree_output=$(git -C "$workspace_root" worktree list --porcelain 2>/dev/null) || stop_collector "git_worktree_unavailable"
     worktree_count=$(printf '%s\n' "$worktree_output" | awk '$1 == "worktree" { n++ } END { print n + 0 }')
 
-    status_output=$(git -C "$workspace_root" status --porcelain=v1 2>/dev/null) || stop_collector "git_status_unavailable"
+    status_output=$(git -C "$workspace_root" status --porcelain=v1 --untracked-files=all 2>/dev/null) || stop_collector "git_status_unavailable"
     git_status_available=true
     untracked_count=$(printf '%s\n' "$status_output" | awk 'length($0) >= 2 && substr($0, 1, 2) == "??" { n++ } END { print n + 0 }')
     conflict_count=$(printf '%s\n' "$status_output" | awk '
@@ -95,6 +98,8 @@ if command -v git >/dev/null 2>&1; then
   elif has_git_marker_in_ancestry "$resolved_path"; then
     stop_collector "git_root_unavailable"
   fi
+elif has_git_marker_in_ancestry "$resolved_path"; then
+  stop_collector "git_unavailable"
 fi
 
 json_escape() {

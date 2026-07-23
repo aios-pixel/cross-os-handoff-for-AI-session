@@ -9,7 +9,7 @@ Reconstruct project context from verified files and Git state. Never treat a new
 
 ## Contract version
 
-- Skill version: `2.1.5`
+- Skill version: `2.1.6`
 - Handoff schema: `3`
 - Durable state: project files and Git artifacts
 - Conversation transcripts and model memory: supplementary evidence only

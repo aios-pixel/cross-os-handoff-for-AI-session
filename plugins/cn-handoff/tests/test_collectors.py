@@ -175,6 +175,96 @@ class CollectorContractTests(unittest.TestCase):
             self.assertEqual(data["GitStatus"]["Untracked"], 1)
             self.assertEqual(data["GitStatus"]["Conflicts"], 0)
 
+    def test_native_collector_rejects_missing_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            missing_workspace = Path(temporary_directory) / "missing"
+            result = self.run_native_collector(missing_workspace, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertIn("collector_error=workspace_unavailable", result.stderr)
+
+    def test_native_collector_fails_closed_when_git_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repository = root / "repository"
+            repository.mkdir()
+            self.run_git(repository, "init", "-q")
+            fake_bin = root / "fake-bin"
+            fake_bin.mkdir()
+
+            if platform.system() == "Windows":
+                environment = os.environ.copy()
+                environment["PATH"] = str(fake_bin)
+            else:
+                for command_name in ("bash", "dirname"):
+                    command_path = shutil.which(command_name)
+                    self.assertIsNotNone(command_path)
+                    (fake_bin / command_name).symlink_to(command_path)
+                environment = os.environ.copy()
+                environment["PATH"] = str(fake_bin)
+
+            result = self.run_native_collector(repository, check=False, env=environment)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertIn("collector_error=git_unavailable", result.stderr)
+
+    def test_native_collector_ignores_hidden_untracked_host_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            repository = Path(temporary_directory)
+            self.run_git(repository, "init", "-q")
+            self.run_git(repository, "config", "user.name", "Collector Test")
+            self.run_git(repository, "config", "user.email", "collector.invalid")
+            (repository / "tracked.txt").write_text("base\n", encoding="utf-8")
+            self.run_git(repository, "add", "tracked.txt")
+            self.run_git(repository, "commit", "-q", "-m", "base")
+            self.run_git(repository, "config", "status.showUntrackedFiles", "no")
+            (repository / "untracked.txt").write_text("untracked\n", encoding="utf-8")
+
+            result = self.run_native_collector(repository)
+            data = json.loads(result.stdout)
+            self.assertTrue(data["GitStatus"]["IsDirty"])
+            self.assertEqual(data["GitStatus"]["Untracked"], 1)
+
+    def test_collectors_disable_git_optional_locks(self) -> None:
+        bash_script = (SCRIPTS / "collect-workspace-state.sh").read_text(encoding="utf-8")
+        powershell_script = (SCRIPTS / "collect-workspace-state.ps1").read_text(encoding="utf-8")
+        self.assertIn("export GIT_OPTIONAL_LOCKS=0", bash_script)
+        self.assertIn('$env:GIT_OPTIONAL_LOCKS = "0"', powershell_script)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repository = root / "repository"
+            repository.mkdir()
+            self.run_git(repository, "init", "-q")
+            self.run_git(repository, "config", "user.name", "Collector Test")
+            self.run_git(repository, "config", "user.email", "collector.invalid")
+            (repository / "tracked.txt").write_text("base\n", encoding="utf-8")
+            self.run_git(repository, "add", "tracked.txt")
+            self.run_git(repository, "commit", "-q", "-m", "base")
+            fake_bin = root / "fake-bin"
+            fake_bin.mkdir()
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+
+            if platform.system() == "Windows":
+                wrapper = fake_bin / "git.cmd"
+                wrapper.write_text(
+                    f'@echo off\r\nif not "%GIT_OPTIONAL_LOCKS%"=="0" exit /b 43\r\n"{real_git}" %*\r\n',
+                    encoding="utf-8",
+                )
+            else:
+                wrapper = fake_bin / "git"
+                wrapper.write_text(
+                    f'#!/bin/sh\n[ "$GIT_OPTIONAL_LOCKS" = "0" ] || exit 43\nexec "{real_git}" "$@"\n',
+                    encoding="utf-8",
+                )
+                wrapper.chmod(0o755)
+
+            environment = os.environ.copy()
+            environment["PATH"] = str(fake_bin) + os.pathsep + environment.get("PATH", "")
+            result = self.run_native_collector(repository, env=environment)
+            self.assert_contract(result.stdout)
+
     def test_native_collector_counts_recursive_git_directories_and_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             repository = Path(temporary_directory)
@@ -310,14 +400,23 @@ class CollectorContractTests(unittest.TestCase):
         shell = shutil.which("pwsh") or shutil.which("powershell")
         if not shell:
             self.skipTest("PowerShell is unavailable on this host")
-        result = subprocess.run(
-            [shell, "-NoProfile", "-File", str(SCRIPTS / "collect-workspace-state.ps1"), "-Path", str(WORKSPACE_ROOT)],
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        )
-        self.assert_contract(result.stdout)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            harness = Path(temporary_directory) / "invoke-collector.ps1"
+            harness.write_text(
+                '$env:GIT_OPTIONAL_LOCKS = "caller-value"\n'
+                '$collectorOutput = @(& $args[0] -Path $args[1])\n'
+                'if ($env:GIT_OPTIONAL_LOCKS -ne "caller-value") { exit 44 }\n'
+                '$collectorOutput\n',
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [shell, "-NoProfile", "-File", str(harness), str(SCRIPTS / "collect-workspace-state.ps1"), str(WORKSPACE_ROOT)],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            self.assert_contract(result.stdout)
 
     def test_windows_collector_declares_redacted_contract(self) -> None:
         script = (SCRIPTS / "collect-workspace-state.ps1").read_text(encoding="utf-8")
@@ -334,6 +433,13 @@ class CollectorContractTests(unittest.TestCase):
         self.assertIn("Available = $gitStatusAvailable", script)
         self.assertIn('Stop-Collector -Code "git_status_unavailable"', script)
         self.assertIn('Stop-Collector -Code "git_root_unavailable"', script)
+        self.assertIn('Stop-Collector -Code "git_unavailable"', script)
+        self.assertIn('Stop-Collector -Code "workspace_unavailable"', script)
+        self.assertIn('"--untracked-files=all"', script)
+        self.assertIn('$env:GIT_OPTIONAL_LOCKS = "0"', script)
+        self.assertIn('$previousOptionalLocks = $env:GIT_OPTIONAL_LOCKS', script)
+        self.assertIn('$env:GIT_OPTIONAL_LOCKS = $previousOptionalLocks', script)
+        self.assertIn('Remove-Item Env:GIT_OPTIONAL_LOCKS', script)
         self.assertIn("Test-GitMarkerInAncestry", script)
         self.assertIn('$_.Substring(0, 2) -eq "??"', script)
         self.assertNotIn('-like "??*"', script)
@@ -344,7 +450,7 @@ class CollectorContractTests(unittest.TestCase):
     def test_plugin_and_skill_have_no_placeholders(self) -> None:
         manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "cn-handoff")
-        self.assertEqual(manifest["version"], "2.1.5")
+        self.assertEqual(manifest["version"], "2.1.6")
         skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: handoff", skill)
         self.assertNotIn("[TO" + "DO:", skill)

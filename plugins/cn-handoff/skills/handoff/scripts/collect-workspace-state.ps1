@@ -26,8 +26,11 @@ function Invoke-GitReadOnly {
     )
 
     $previousPreference = $ErrorActionPreference
+    $hadOptionalLocks = Test-Path Env:GIT_OPTIONAL_LOCKS
+    $previousOptionalLocks = $env:GIT_OPTIONAL_LOCKS
     $ErrorActionPreference = "Continue"
     try {
+        $env:GIT_OPTIONAL_LOCKS = "0"
         $output = @(& git -C $WorkingPath @Arguments 2>$null)
         return [pscustomobject]@{
             ExitCode = $LASTEXITCODE
@@ -35,6 +38,12 @@ function Invoke-GitReadOnly {
         }
     }
     finally {
+        if ($hadOptionalLocks) {
+            $env:GIT_OPTIONAL_LOCKS = $previousOptionalLocks
+        }
+        else {
+            Remove-Item Env:GIT_OPTIONAL_LOCKS -ErrorAction SilentlyContinue
+        }
         $ErrorActionPreference = $previousPreference
     }
 }
@@ -53,6 +62,10 @@ function Test-GitMarkerInAncestry {
         $currentItem = $currentItem.Parent
     }
     return $false
+}
+
+if (-not (Test-Path -LiteralPath $Path)) {
+    Stop-Collector -Code "workspace_unavailable"
 }
 
 $resolvedItem = Get-Item -LiteralPath (Resolve-Path -LiteralPath $Path).Path
@@ -126,7 +139,7 @@ if ($null -ne $gitCommand) {
             }
         }
 
-        $statusResult = Invoke-GitReadOnly -WorkingPath $workspaceRoot -Arguments @("status", "--porcelain=v1")
+        $statusResult = Invoke-GitReadOnly -WorkingPath $workspaceRoot -Arguments @("status", "--porcelain=v1", "--untracked-files=all")
         if ($statusResult.ExitCode -ne 0) { Stop-Collector -Code "git_status_unavailable" }
         $statusLines = @($statusResult.Output | ForEach-Object { [string]$_ })
         $gitStatusAvailable = $true
@@ -142,6 +155,9 @@ if ($null -ne $gitCommand) {
     elseif (Test-GitMarkerInAncestry -StartPath $resolvedPath) {
         Stop-Collector -Code "git_root_unavailable"
     }
+}
+elseif (Test-GitMarkerInAncestry -StartPath $resolvedPath) {
+    Stop-Collector -Code "git_unavailable"
 }
 
 $untrackedCount = @($statusLines | Where-Object {

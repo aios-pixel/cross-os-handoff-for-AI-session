@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 The public Git history was reconstructed from verified release snapshots. Private repository history, private project documents, and host-specific paths were intentionally excluded.
 
+## [2.1.6] - 2026-07-23
+
+### Changed
+
+- Hardened collector execution and environment-state boundaries.
+- Preserved the caller's `GIT_OPTIONAL_LOCKS` value after Windows collection.
+- Expanded cross-platform contract coverage to 18 tests.
+
 ## [2.1.5] - 2026-07-23
 
 ### Changed
